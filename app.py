@@ -14,8 +14,8 @@ st.set_page_config(page_title="Pediatric Growth Chart (0-5 years)", layout="wide
 st.title("Pediatric Growth Chart")
 st.markdown("Interactive growth chart for children from 0-5 years")
 
-# Get query parameters from URL
-query_params = st.experimental_get_query_params()
+# Get query parameters from URL - using modern st.query_params instead of experimental version
+query_params = st.query_params
 
 # Function to load CSV data
 @st.cache_data
@@ -189,12 +189,12 @@ data = load_data()
 st.sidebar.header("Patient Information")
 
 # Get default values from URL parameters if available
-default_age_range = query_params.get("age_range", ["0-2 years"])[0]
-default_gender = query_params.get("gender", ["Boy"])[0]
-default_name = query_params.get("name", [""])[0]
-default_age = int(query_params.get("age", ["12"])[0]) if "age" in query_params else 12
-default_height = float(query_params.get("height", ["75.0"])[0]) if "height" in query_params else 75.0
-default_weight = float(query_params.get("weight", ["10.0"])[0]) if "weight" in query_params else 10.0
+default_age_range = query_params.get("age_range", "0-2 years")
+default_gender = query_params.get("gender", "Boy")
+default_name = query_params.get("name", "")
+default_age = int(query_params.get("age", 12)) if "age" in query_params else 12
+default_height = float(query_params.get("height", 75.0)) if "height" in query_params else 75.0
+default_weight = float(query_params.get("weight", 10.0)) if "weight" in query_params else 10.0
 
 # Age range selection - use default from URL if available
 age_range = st.sidebar.radio("Age Range", ["0-2 years", "2-5 years"], 
@@ -279,7 +279,7 @@ patient_weight = st.sidebar.number_input(
 )
 
 # Chart selector with default from URL if available
-default_chart = query_params.get("chart", ["Both"])[0]
+default_chart = query_params.get("chart", "Both")
 chart_type = st.sidebar.radio(
     "Chart Type", 
     ["Height-for-age", "Weight-for-age", "Both"],
@@ -291,6 +291,7 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("Share Patient Data")
 
 if st.sidebar.button("Generate Shareable Link"):
+    # Update to use st.query_params.set_page_config_to_set method
     base_url = "https://clearpupil-pediatric-growth-chart.streamlit.app/"  # Replace with your actual app URL
     params = {
         "name": patient_name,
