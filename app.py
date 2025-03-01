@@ -286,13 +286,14 @@ chart_type = st.sidebar.radio(
     index=0 if default_chart == "Height-for-age" else 1 if default_chart == "Weight-for-age" else 2
 )
 
+# Replace just the "Generate shareable link" section with this improved version
+
 # Generate shareable link
 st.sidebar.markdown("---")
 st.sidebar.subheader("Share Patient Data")
 
 if st.sidebar.button("Generate Shareable Link"):
-    # Update to use st.query_params.set_page_config_to_set method
-    base_url = "https://clearpupil-pediatric-growth-chart.streamlit.app/"  # Replace with your actual app URL
+    # Create query parameters
     params = {
         "name": patient_name,
         "age": str(patient_age),
@@ -302,18 +303,30 @@ if st.sidebar.button("Generate Shareable Link"):
         "age_range": age_range,
         "chart": chart_type
     }
-    query_string = urllib.parse.urlencode(params)
-    shareable_link = f"{base_url}?{query_string}"
-    st.sidebar.text_area("Shareable Link", shareable_link, height=100)
-    st.sidebar.info("Copy this link to share this patient's data")
     
-    # Add a button to copy to clipboard (this is just visual, actual copying happens via browser)
-    st.sidebar.markdown(f"""
-    <button onclick="navigator.clipboard.writeText('{shareable_link}')">
-        Copy to clipboard
-    </button>
-    """, unsafe_allow_html=True)
-
+    # Create the query string
+    query_string = urllib.parse.urlencode(params)
+    
+    # Method 1: Relative URL (more reliable)
+    st.sidebar.subheader("Option 1: Copy query parameters")
+    st.sidebar.code(f"?{query_string}")
+    st.sidebar.info("Add these parameters to the end of your app's URL")
+    
+    # Method 2: Shorter link format (easier to share)
+    st.sidebar.subheader("Option 2: Manual copy")
+    st.sidebar.text_area(
+        "Full link (select all and copy)", 
+        f"https://clearpupil-pediatric-growth-chart.streamlit.app/?{query_string}", 
+        height=80
+    )
+    
+    # Provide clear instructions
+    st.sidebar.markdown("""
+    #### How to share:
+    1. Select the entire link above
+    2. Copy it (Ctrl+C or Cmd+C)
+    3. Paste it in an email or message
+    """)
 # Convert age to display format
 def format_age(age_months):
     if age_months < 12:
