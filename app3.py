@@ -1,21 +1,16 @@
-# This is the paediatric growth chart app for Oakley medical
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import os
-import urllib.parse  # For URL encoding
 
-# Set page config (only once)
+# Set page config
 st.set_page_config(page_title="Pediatric Growth Chart (0-5 years)", layout="wide")
 
-# Title and description (only once)
+# Title and description
 st.title("Pediatric Growth Chart")
 st.markdown("Interactive growth chart for children from 0-5 years")
-
-# Get query parameters from URL
-query_params = st.experimental_get_query_params()
 
 # Function to load CSV data
 @st.cache_data
@@ -188,46 +183,30 @@ data = load_data()
 # Create sidebar for inputs
 st.sidebar.header("Patient Information")
 
-# Get default values from URL parameters if available
-default_age_range = query_params.get("age_range", ["0-2 years"])[0]
-default_gender = query_params.get("gender", ["Boy"])[0]
-default_name = query_params.get("name", [""])[0]
-default_age = int(query_params.get("age", ["12"])[0]) if "age" in query_params else 12
-default_height = float(query_params.get("height", ["75.0"])[0]) if "height" in query_params else 75.0
-default_weight = float(query_params.get("weight", ["10.0"])[0]) if "weight" in query_params else 10.0
+# Age range selection
+age_range = st.sidebar.radio("Age Range", ["0-2 years", "2-5 years"])
 
-# Age range selection - use default from URL if available
-age_range = st.sidebar.radio("Age Range", ["0-2 years", "2-5 years"], 
-                            index=0 if default_age_range == "0-2 years" else 1)
+# Gender selection
+gender = st.sidebar.radio("Gender", ["Boy", "Girl"])
 
-# Gender selection - use default from URL if available
-gender = st.sidebar.radio("Gender", ["Boy", "Girl"], 
-                         index=0 if default_gender == "Boy" else 1)
-
-# Patient data inputs - use defaults from URL if available
-patient_name = st.sidebar.text_input("Patient Name", default_name)
+# Patient data inputs
+patient_name = st.sidebar.text_input("Patient Name", "")
 
 # Age selector based on selected range
 if age_range == "0-2 years":
-    min_age, max_age = 0, 24
+    patient_age = st.sidebar.slider("Patient Age (months)", 0, 24, 12, 1)
     max_height = 100
     min_height = 40
     max_weight = 20
     min_weight = 2
 else:  # 2-5 years
-    min_age, max_age = 24, 60
+    patient_age = st.sidebar.slider("Patient Age (months)", 24, 60, 36, 1)
     max_height = 130
     min_height = 75
     max_weight = 30
     min_weight = 8
 
-# Ensure default age is within valid range
-default_age = max(min_age, min(default_age, max_age))
-
-# Use the adjusted default age
-patient_age = st.sidebar.slider("Patient Age (months)", min_age, max_age, default_age, 1)
-
-# Get appropriate data based on age, gender
+# Get appropriate default values based on age, gender and percentiles
 if gender == "Boy":
     if age_range == "0-2 years":
         height_df = data['boys_height_0_2']
@@ -247,26 +226,15 @@ else:
 closest_age_idx = (height_df['age'] - patient_age).abs().idxmin() if not height_df.empty else 0
 
 # Get P50 values for the closest age
-default_height_from_data = height_df.loc[closest_age_idx, 'P50'] if not height_df.empty else min_height + (max_height - min_height) / 2
-default_weight_from_data = weight_df.loc[closest_age_idx, 'P50'] if not weight_df.empty else min_weight + (max_weight - min_weight) / 2
+default_height = height_df.loc[closest_age_idx, 'P50'] if not height_df.empty else min_height + (max_height - min_height) / 2
+default_weight = weight_df.loc[closest_age_idx, 'P50'] if not weight_df.empty else min_weight + (max_weight - min_weight) / 2
 
-# Use either URL parameter values or data-based defaults
-if "height" in query_params:
-    display_height = default_height
-else:
-    display_height = default_height_from_data
-
-if "weight" in query_params:
-    display_weight = default_weight
-else:
-    display_weight = default_weight_from_data
-
-# Patient measurements with appropriate defaults
+# Patient measurements
 patient_height = st.sidebar.number_input(
     "Patient Height (cm)", 
     min_value=float(min_height), 
     max_value=float(max_height), 
-    value=float(display_height), 
+    value=float(default_height), 
     step=0.1
 )
 
@@ -274,44 +242,12 @@ patient_weight = st.sidebar.number_input(
     "Patient Weight (kg)", 
     min_value=float(min_weight), 
     max_value=float(max_weight), 
-    value=float(display_weight), 
+    value=float(default_weight), 
     step=0.1
 )
 
-# Chart selector with default from URL if available
-default_chart = query_params.get("chart", ["Both"])[0]
-chart_type = st.sidebar.radio(
-    "Chart Type", 
-    ["Height-for-age", "Weight-for-age", "Both"],
-    index=0 if default_chart == "Height-for-age" else 1 if default_chart == "Weight-for-age" else 2
-)
-
-# Generate shareable link
-st.sidebar.markdown("---")
-st.sidebar.subheader("Share Patient Data")
-
-if st.sidebar.button("Generate Shareable Link"):
-    base_url = "https://clearpupil-pediatric-growth-chart.streamlit.app/"  # Replace with your actual app URL
-    params = {
-        "name": patient_name,
-        "age": str(patient_age),
-        "height": str(patient_height),
-        "weight": str(patient_weight),
-        "gender": gender,
-        "age_range": age_range,
-        "chart": chart_type
-    }
-    query_string = urllib.parse.urlencode(params)
-    shareable_link = f"{base_url}?{query_string}"
-    st.sidebar.text_area("Shareable Link", shareable_link, height=100)
-    st.sidebar.info("Copy this link to share this patient's data")
-    
-    # Add a button to copy to clipboard (this is just visual, actual copying happens via browser)
-    st.sidebar.markdown(f"""
-    <button onclick="navigator.clipboard.writeText('{shareable_link}')">
-        Copy to clipboard
-    </button>
-    """, unsafe_allow_html=True)
+# Chart selector
+chart_type = st.sidebar.radio("Chart Type", ["Height-for-age", "Weight-for-age", "Both"])
 
 # Convert age to display format
 def format_age(age_months):
@@ -673,5 +609,4 @@ with st.expander("How to use this app"):
         - Add previous measurements to calculate growth velocity
         - Calculate BMI
         - Add clinical notes
-        - Generate a shareable link to send to parents
     """)
